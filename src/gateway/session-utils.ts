@@ -556,6 +556,8 @@ export function listSessionsFromStore(params: {
         entry?.label ??
         originLabel;
       const deliveryFields = normalizeSessionDeliveryFields(entry);
+      const resolvedModel = resolveSessionModelRef(cfg, entry);
+      const hasModelOverride = Boolean(entry?.modelOverride || entry?.providerOverride);
       return {
         key,
         entry,
@@ -581,8 +583,10 @@ export function listSessionsFromStore(params: {
         outputTokens: entry?.outputTokens,
         totalTokens: total,
         responseUsage: entry?.responseUsage,
-        modelProvider: entry?.modelProvider,
-        model: entry?.model,
+        modelProvider: hasModelOverride
+          ? resolvedModel.provider
+          : (entry?.modelProvider ?? resolvedModel.provider),
+        model: hasModelOverride ? resolvedModel.model : (entry?.model ?? resolvedModel.model),
         contextTokens: entry?.contextTokens,
         deliveryContext: deliveryFields.deliveryContext,
         lastChannel: deliveryFields.lastChannel ?? entry?.lastChannel,
