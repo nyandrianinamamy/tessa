@@ -78,7 +78,10 @@ export function extractContentFromMessage(message: unknown): string {
   for (const block of content) {
     if (!block || typeof block !== "object") continue;
     const rec = block as Record<string, unknown>;
-    if (rec.type === "text" && typeof rec.text === "string") {
+    if (
+      (rec.type === "text" || rec.type === "output_text" || rec.type === "input_text") &&
+      typeof rec.text === "string"
+    ) {
       parts.push(rec.text);
     }
   }
@@ -105,7 +108,10 @@ function extractTextBlocks(content: unknown, opts?: { includeThinking?: boolean 
   for (const block of content) {
     if (!block || typeof block !== "object") continue;
     const record = block as Record<string, unknown>;
-    if (record.type === "text" && typeof record.text === "string") {
+    if (
+      (record.type === "text" || record.type === "output_text" || record.type === "input_text") &&
+      typeof record.text === "string"
+    ) {
       textParts.push(record.text);
     }
     if (

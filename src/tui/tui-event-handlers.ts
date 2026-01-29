@@ -9,7 +9,7 @@ type EventHandlerContext = {
   tui: TUI;
   state: TuiStateAccess;
   setActivityStatus: (text: string) => void;
-  refreshSessionInfo?: () => Promise<void>;
+  refreshSessionInfo?: (opts?: { force?: boolean }) => Promise<void>;
 };
 
 export function createEventHandlers(context: EventHandlerContext) {

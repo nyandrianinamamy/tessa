@@ -42,6 +42,7 @@ export function createSessionActions(context: SessionActionContext) {
     setActivityStatus,
   } = context;
   let refreshSessionInfoPromise: Promise<void> | null = null;
+  let refreshSessionInfoKey: string | null = null;
 
   const applyAgentsResult = (result: GatewayAgentsList) => {
     state.agentDefaultId = normalizeAgentId(result.defaultId);
@@ -95,25 +96,37 @@ export function createSessionActions(context: SessionActionContext) {
     }
   };
 
-  const refreshSessionInfo = async () => {
-    if (refreshSessionInfoPromise) return refreshSessionInfoPromise;
-    refreshSessionInfoPromise = (async () => {
+  const refreshSessionInfo = async (opts?: { force?: boolean }) => {
+    const requestSessionKey = state.currentSessionKey;
+    const requestAgentId = state.currentAgentId;
+    const requestKey = `${requestAgentId}:${requestSessionKey}`;
+    if (!opts?.force && refreshSessionInfoPromise && refreshSessionInfoKey === requestKey) {
+      return refreshSessionInfoPromise;
+    }
+    refreshSessionInfoKey = requestKey;
+    const promise = (async () => {
       try {
         const listAgentId =
-          state.currentSessionKey === "global" || state.currentSessionKey === "unknown"
+          requestSessionKey === "global" || requestSessionKey === "unknown"
             ? undefined
-            : state.currentAgentId;
+            : requestAgentId;
         const result = await client.listSessions({
           includeGlobal: false,
           includeUnknown: false,
           agentId: listAgentId,
         });
+        if (
+          state.currentSessionKey !== requestSessionKey ||
+          state.currentAgentId !== requestAgentId
+        ) {
+          return;
+        }
         const entry = result.sessions.find((row) => {
           // Exact match
-          if (row.key === state.currentSessionKey) return true;
+          if (row.key === requestSessionKey) return true;
           // Also match canonical keys like "agent:default:main" against "main"
           const parsed = parseAgentSessionKey(row.key);
-          return parsed?.rest === state.currentSessionKey;
+          return parsed?.rest === requestSessionKey;
         });
         state.sessionInfo = {
           thinkingLevel: entry?.thinkingLevel,
@@ -136,10 +149,14 @@ export function createSessionActions(context: SessionActionContext) {
       updateFooter();
       tui.requestRender();
     })();
+    refreshSessionInfoPromise = promise;
     try {
-      await refreshSessionInfoPromise;
+      await promise;
     } finally {
-      refreshSessionInfoPromise = null;
+      if (refreshSessionInfoPromise === promise) {
+        refreshSessionInfoPromise = null;
+        if (refreshSessionInfoKey === requestKey) refreshSessionInfoKey = null;
+      }
     }
   };
 

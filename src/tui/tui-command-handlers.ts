@@ -31,7 +31,7 @@ type CommandHandlerContext = {
   deliverDefault: boolean;
   openOverlay: (component: Component) => void;
   closeOverlay: () => void;
-  refreshSessionInfo: () => Promise<void>;
+  refreshSessionInfo: (opts?: { force?: boolean }) => Promise<void>;
   loadHistory: () => Promise<void>;
   setSession: (key: string) => Promise<void>;
   refreshAgents: () => Promise<void>;
@@ -86,7 +86,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
               model: item.value,
             });
             chatLog.addSystem(`model set to ${item.value}`);
-            await refreshSessionInfo();
+            await refreshSessionInfo({ force: true });
           } catch (err) {
             chatLog.addSystem(`model set failed: ${String(err)}`);
           }
@@ -255,6 +255,18 @@ export function createCommandHandlers(context: CommandHandlerContext) {
           chatLog.addSystem(`status failed: ${String(err)}`);
         }
         break;
+      case "refresh":
+        try {
+          setActivityStatus("refreshing");
+          await loadHistory();
+          await refreshSessionInfo({ force: true });
+          chatLog.addSystem("refreshed");
+          setActivityStatus("idle");
+        } catch (err) {
+          chatLog.addSystem(`refresh failed: ${String(err)}`);
+          setActivityStatus("refresh failed");
+        }
+        break;
       case "agent":
         if (!args) {
           await openAgentSelector();
@@ -285,7 +297,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
               model: args,
             });
             chatLog.addSystem(`model set to ${args}`);
-            await refreshSessionInfo();
+            await refreshSessionInfo({ force: true });
           } catch (err) {
             chatLog.addSystem(`model set failed: ${String(err)}`);
           }
