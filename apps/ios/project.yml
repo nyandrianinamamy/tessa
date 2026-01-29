@@ -1,4 +1,4 @@
-name: OpenClaw
+name: Tessa
 options:
   bundleIdPrefix: ai.openclaw
   deploymentTarget:
@@ -79,25 +79,25 @@ targets:
     info:
       path: Sources/Info.plist
       properties:
-        CFBundleDisplayName: OpenClaw
+        CFBundleDisplayName: Tessa
         CFBundleIconName: AppIcon
-        CFBundleShortVersionString: "2026.1.27-beta.1"
-        CFBundleVersion: "20260126"
+        CFBundleShortVersionString: "2026.1.29"
+        CFBundleVersion: "202601290"
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UIBackgroundModes:
           - audio
-        NSLocalNetworkUsageDescription: OpenClaw discovers and connects to your OpenClaw gateway on the local network.
+        NSLocalNetworkUsageDescription: Tessa discovers and connects to your Tessa gateway on the local network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true
         NSBonjourServices:
-          - _openclaw-gw._tcp
-        NSCameraUsageDescription: OpenClaw can capture photos or short video clips when requested via the gateway.
-        NSLocationWhenInUseUsageDescription: OpenClaw uses your location when you allow location sharing.
-        NSLocationAlwaysAndWhenInUseUsageDescription: OpenClaw can share your location in the background when you enable Always.
-        NSMicrophoneUsageDescription: OpenClaw needs microphone access for voice wake.
-        NSSpeechRecognitionUsageDescription: OpenClaw uses on-device speech recognition for voice wake.
+          - _tessa-gw._tcp
+        NSCameraUsageDescription: Tessa can capture photos or short video clips when requested via the gateway.
+        NSLocationWhenInUseUsageDescription: Tessa uses your location when you allow location sharing.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Tessa can share your location in the background when you enable Always.
+        NSMicrophoneUsageDescription: Tessa needs microphone access for voice wake.
+        NSSpeechRecognitionUsageDescription: Tessa uses on-device speech recognition for voice wake.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
@@ -129,6 +129,6 @@ targets:
     info:
       path: Tests/Info.plist
       properties:
-        CFBundleDisplayName: OpenClawTests
-        CFBundleShortVersionString: "2026.1.27-beta.1"
-        CFBundleVersion: "20260126"
+        CFBundleDisplayName: TessaTests
+        CFBundleShortVersionString: "2026.1.29"
+        CFBundleVersion: "202601290"
