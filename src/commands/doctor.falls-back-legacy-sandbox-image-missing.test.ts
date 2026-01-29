@@ -298,6 +298,12 @@ vi.mock("./doctor-state-migrations.js", () => ({
     changes: [],
     warnings: [],
   }),
+  autoMigrateMoltbotToTessaStateDir: vi.fn().mockResolvedValue({
+    migrated: false,
+    skipped: false,
+    changes: [],
+    warnings: [],
+  }),
   detectLegacyStateMigrations: vi.fn().mockResolvedValue({
     targetAgentId: "main",
     targetMainKey: "main",

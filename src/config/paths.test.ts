@@ -12,10 +12,10 @@ import {
 } from "./paths.js";
 
 describe("oauth paths", () => {
-  it("prefers OPENCLAW_OAUTH_DIR over OPENCLAW_STATE_DIR", () => {
+  it("prefers CLAWDBOT_OAUTH_DIR over CLAWDBOT_STATE_DIR", () => {
     const env = {
-      OPENCLAW_OAUTH_DIR: "/custom/oauth",
-      OPENCLAW_STATE_DIR: "/custom/state",
+      CLAWDBOT_OAUTH_DIR: "/custom/oauth",
+      CLAWDBOT_STATE_DIR: "/custom/state",
     } as NodeJS.ProcessEnv;
 
     expect(resolveOAuthDir(env, "/custom/state")).toBe(path.resolve("/custom/oauth"));
@@ -24,9 +24,9 @@ describe("oauth paths", () => {
     );
   });
 
-  it("derives oauth path from OPENCLAW_STATE_DIR when unset", () => {
+  it("derives oauth path from CLAWDBOT_STATE_DIR when unset", () => {
     const env = {
-      OPENCLAW_STATE_DIR: "/custom/state",
+      CLAWDBOT_STATE_DIR: "/custom/state",
     } as NodeJS.ProcessEnv;
 
     expect(resolveOAuthDir(env, "/custom/state")).toBe(path.join("/custom/state", "credentials"));
@@ -37,29 +37,30 @@ describe("oauth paths", () => {
 });
 
 describe("state + config path candidates", () => {
-  it("uses OPENCLAW_STATE_DIR when set", () => {
+  it("prefers MOLTBOT_STATE_DIR over legacy state dir env", () => {
     const env = {
-      OPENCLAW_STATE_DIR: "/new/state",
+      MOLTBOT_STATE_DIR: "/new/state",
+      CLAWDBOT_STATE_DIR: "/legacy/state",
     } as NodeJS.ProcessEnv;
 
     expect(resolveStateDir(env, () => "/home/test")).toBe(path.resolve("/new/state"));
   });
 
-  it("orders default config candidates in a stable order", () => {
+  it("orders default config candidates as new then legacy", () => {
     const home = "/home/test";
     const candidates = resolveDefaultConfigCandidates({} as NodeJS.ProcessEnv, () => home);
-    const expectedDirs = [".openclaw", ".clawdbot", ".moltbot", ".moldbot"];
-    const expectedFiles = ["openclaw.json", "clawdbot.json", "moltbot.json", "moldbot.json"];
-    const expected = expectedDirs.flatMap((dir) =>
-      expectedFiles.map((file) => path.join(home, dir, file)),
-    );
-    expect(candidates).toEqual(expected);
+    expect(candidates[0]).toBe(path.join(home, ".tessa", "tessa.json"));
+    expect(candidates[1]).toBe(path.join(home, ".tessa", "moltbot.json"));
+    expect(candidates[2]).toBe(path.join(home, ".tessa", "clawdbot.json"));
+    expect(candidates[3]).toBe(path.join(home, ".moltbot", "tessa.json"));
+    expect(candidates[4]).toBe(path.join(home, ".moltbot", "moltbot.json"));
+    expect(candidates[5]).toBe(path.join(home, ".moltbot", "clawdbot.json"));
   });
 
-  it("prefers ~/.openclaw when it exists and legacy dir is missing", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-state-"));
+  it("prefers ~/.moltbot when it exists and legacy dir is missing", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "moltbot-state-"));
     try {
-      const newDir = path.join(root, ".openclaw");
+      const newDir = path.join(root, ".moltbot");
       await fs.mkdir(newDir, { recursive: true });
       const resolved = resolveStateDir({} as NodeJS.ProcessEnv, () => root);
       expect(resolved).toBe(newDir);
@@ -68,18 +69,20 @@ describe("state + config path candidates", () => {
     }
   });
 
-  it("CONFIG_PATH prefers existing config when present", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-config-"));
+  it("CONFIG_PATH prefers existing legacy filename when present", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "moltbot-config-"));
     const previousHome = process.env.HOME;
     const previousUserProfile = process.env.USERPROFILE;
     const previousHomeDrive = process.env.HOMEDRIVE;
     const previousHomePath = process.env.HOMEPATH;
-    const previousOpenClawConfig = process.env.OPENCLAW_CONFIG_PATH;
-    const previousOpenClawState = process.env.OPENCLAW_STATE_DIR;
+    const previousMoltbotConfig = process.env.MOLTBOT_CONFIG_PATH;
+    const previousClawdbotConfig = process.env.CLAWDBOT_CONFIG_PATH;
+    const previousMoltbotState = process.env.MOLTBOT_STATE_DIR;
+    const previousClawdbotState = process.env.CLAWDBOT_STATE_DIR;
     try {
-      const legacyDir = path.join(root, ".openclaw");
+      const legacyDir = path.join(root, ".clawdbot");
       await fs.mkdir(legacyDir, { recursive: true });
-      const legacyPath = path.join(legacyDir, "openclaw.json");
+      const legacyPath = path.join(legacyDir, "clawdbot.json");
       await fs.writeFile(legacyPath, "{}", "utf-8");
 
       process.env.HOME = root;
@@ -89,8 +92,10 @@ describe("state + config path candidates", () => {
         process.env.HOMEDRIVE = parsed.root.replace(/\\$/, "");
         process.env.HOMEPATH = root.slice(parsed.root.length - 1);
       }
-      delete process.env.OPENCLAW_CONFIG_PATH;
-      delete process.env.OPENCLAW_STATE_DIR;
+      delete process.env.MOLTBOT_CONFIG_PATH;
+      delete process.env.CLAWDBOT_CONFIG_PATH;
+      delete process.env.MOLTBOT_STATE_DIR;
+      delete process.env.CLAWDBOT_STATE_DIR;
 
       vi.resetModules();
       const { CONFIG_PATH } = await import("./paths.js");
@@ -107,31 +112,29 @@ describe("state + config path candidates", () => {
       else process.env.HOMEDRIVE = previousHomeDrive;
       if (previousHomePath === undefined) delete process.env.HOMEPATH;
       else process.env.HOMEPATH = previousHomePath;
-      if (previousOpenClawConfig === undefined) delete process.env.OPENCLAW_CONFIG_PATH;
-      else process.env.OPENCLAW_CONFIG_PATH = previousOpenClawConfig;
-      if (previousOpenClawConfig === undefined) delete process.env.OPENCLAW_CONFIG_PATH;
-      else process.env.OPENCLAW_CONFIG_PATH = previousOpenClawConfig;
-      if (previousOpenClawState === undefined) delete process.env.OPENCLAW_STATE_DIR;
-      else process.env.OPENCLAW_STATE_DIR = previousOpenClawState;
-      if (previousOpenClawState === undefined) delete process.env.OPENCLAW_STATE_DIR;
-      else process.env.OPENCLAW_STATE_DIR = previousOpenClawState;
+      if (previousClawdbotConfig === undefined) delete process.env.CLAWDBOT_CONFIG_PATH;
+      else process.env.CLAWDBOT_CONFIG_PATH = previousClawdbotConfig;
+      if (previousMoltbotState === undefined) delete process.env.MOLTBOT_STATE_DIR;
+      else process.env.MOLTBOT_STATE_DIR = previousMoltbotState;
+      if (previousClawdbotState === undefined) delete process.env.CLAWDBOT_STATE_DIR;
+      else process.env.CLAWDBOT_STATE_DIR = previousClawdbotState;
       await fs.rm(root, { recursive: true, force: true });
       vi.resetModules();
     }
   });
 
   it("respects state dir overrides when config is missing", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-config-override-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "moltbot-config-override-"));
     try {
-      const legacyDir = path.join(root, ".openclaw");
+      const legacyDir = path.join(root, ".clawdbot");
       await fs.mkdir(legacyDir, { recursive: true });
-      const legacyConfig = path.join(legacyDir, "openclaw.json");
+      const legacyConfig = path.join(legacyDir, "moltbot.json");
       await fs.writeFile(legacyConfig, "{}", "utf-8");
 
       const overrideDir = path.join(root, "override");
-      const env = { OPENCLAW_STATE_DIR: overrideDir } as NodeJS.ProcessEnv;
+      const env = { MOLTBOT_STATE_DIR: overrideDir } as NodeJS.ProcessEnv;
       const resolved = resolveConfigPath(env, overrideDir, () => root);
-      expect(resolved).toBe(path.join(overrideDir, "openclaw.json"));
+      expect(resolved).toBe(path.join(overrideDir, "tessa.json"));
     } finally {
       await fs.rm(root, { recursive: true, force: true });
     }
