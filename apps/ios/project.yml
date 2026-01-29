@@ -16,17 +16,17 @@ packages:
     path: ../../Swabble
 
 schemes:
-  OpenClaw:
+  Tessa:
     shared: true
     build:
       targets:
-        OpenClaw: all
+        Tessa: all
     test:
       targets:
-        - OpenClawTests
+        - TessaTests
 
 targets:
-  OpenClaw:
+  Tessa:
     type: application
     platform: iOS
     sources:
@@ -109,13 +109,13 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
 
-  OpenClawTests:
+  TessaTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: Tests
     dependencies:
-      - target: OpenClaw
+      - target: Tessa
       - package: Swabble
         product: SwabbleKit
       - sdk: AppIntents.framework
@@ -124,7 +124,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: ai.openclaw.ios.tests
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenClaw.app/OpenClaw"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Tessa.app/Tessa"
         BUNDLE_LOADER: "$(TEST_HOST)"
     info:
       path: Tests/Info.plist
