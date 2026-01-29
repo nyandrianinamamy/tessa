@@ -1,6 +1,7 @@
 export type { LegacyStateDetection } from "../infra/state-migrations.js";
 export {
   autoMigrateLegacyStateDir,
+  autoMigrateMoltbotToTessaStateDir,
   autoMigrateLegacyAgentDir,
   autoMigrateLegacyState,
   detectLegacyStateMigrations,

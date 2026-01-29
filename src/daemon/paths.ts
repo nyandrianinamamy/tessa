@@ -26,12 +26,14 @@ export function resolveUserPathWithHome(input: string, home?: string): string {
 }
 
 export function resolveGatewayStateDir(env: Record<string, string | undefined>): string {
-  const override = env.OPENCLAW_STATE_DIR?.trim();
+  const override =
+    env.TESSA_STATE_DIR?.trim() || env.MOLTBOT_STATE_DIR?.trim() || env.CLAWDBOT_STATE_DIR?.trim();
   if (override) {
     const home = override.startsWith("~") ? resolveHomeDir(env) : undefined;
     return resolveUserPathWithHome(override, home);
   }
   const home = resolveHomeDir(env);
-  const suffix = resolveGatewayProfileSuffix(env.OPENCLAW_PROFILE);
-  return path.join(home, `.openclaw${suffix}`);
+  const profile = env.TESSA_PROFILE?.trim() || env.CLAWDBOT_PROFILE?.trim();
+  const suffix = resolveGatewayProfileSuffix(profile);
+  return path.join(home, `.tessa${suffix}`);
 }

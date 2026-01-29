@@ -15,7 +15,10 @@ import { formatCliCommand } from "../cli/command-format.js";
 import { note } from "../terminal/note.js";
 import { normalizeLegacyConfigValues } from "./doctor-legacy-config.js";
 import type { DoctorOptions } from "./doctor-prompter.js";
-import { autoMigrateLegacyStateDir } from "./doctor-state-migrations.js";
+import {
+  autoMigrateLegacyStateDir,
+  autoMigrateMoltbotToTessaStateDir,
+} from "./doctor-state-migrations.js";
 import { resolveHomeDir } from "../utils.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -127,8 +130,8 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
   const home = resolveHomeDir();
   if (!home) return changes;
 
-  const targetDir = path.join(home, ".openclaw");
-  const targetPath = path.join(targetDir, "openclaw.json");
+  const targetDir = path.join(home, ".tessa");
+  const targetPath = path.join(targetDir, "tessa.json");
   try {
     await fs.access(targetPath);
     return changes;
@@ -137,8 +140,8 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
   }
 
   const legacyCandidates = [
-    path.join(home, ".clawdbot", "clawdbot.json"),
     path.join(home, ".moltbot", "moltbot.json"),
+    path.join(home, ".clawdbot", "clawdbot.json"),
     path.join(home, ".moldbot", "moldbot.json"),
   ];
 
@@ -170,10 +173,31 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
   confirm: (p: { message: string; initialValue: boolean }) => Promise<boolean>;
 }) {
   const shouldRepair = params.options.repair === true || params.options.yes === true;
-  const stateDirResult = await autoMigrateLegacyStateDir({ env: process.env });
-  if (stateDirResult.changes.length > 0) {
-    note(stateDirResult.changes.map((entry) => `- ${entry}`).join("\n"), "Doctor changes");
+
+  // Run migrations in order: clawdbot → moltbot → tessa
+  const legacyStateDirResult = await autoMigrateLegacyStateDir({ env: process.env });
+  if (legacyStateDirResult.changes.length > 0) {
+    note(
+      legacyStateDirResult.changes.map((entry) => `- ${entry}`).join("\n"),
+      "Doctor changes (clawdbot→moltbot)",
+    );
   }
+
+  const moltbotStateDirResult = await autoMigrateMoltbotToTessaStateDir({ env: process.env });
+  if (moltbotStateDirResult.changes.length > 0) {
+    note(
+      moltbotStateDirResult.changes.map((entry) => `- ${entry}`).join("\n"),
+      "Doctor changes (moltbot→tessa)",
+    );
+  }
+
+  // Combine warnings from both migrations
+  const stateDirResult = {
+    changes: [...legacyStateDirResult.changes, ...moltbotStateDirResult.changes],
+    warnings: [...legacyStateDirResult.warnings, ...moltbotStateDirResult.warnings],
+    migrated: legacyStateDirResult.migrated || moltbotStateDirResult.migrated,
+    skipped: legacyStateDirResult.skipped && moltbotStateDirResult.skipped,
+  };
   if (stateDirResult.warnings.length > 0) {
     note(stateDirResult.warnings.map((entry) => `- ${entry}`).join("\n"), "Doctor warnings");
   }
@@ -217,7 +241,7 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
       if (migrated) cfg = migrated;
     } else {
       fixHints.push(
-        `Run "${formatCliCommand("openclaw doctor --fix")}" to apply legacy migrations.`,
+        `Run "${formatCliCommand("tessa doctor --fix")}" to apply legacy migrations.`,
       );
     }
   }
@@ -230,7 +254,7 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
     if (shouldRepair) {
       cfg = normalized.config;
     } else {
-      fixHints.push(`Run "${formatCliCommand("openclaw doctor --fix")}" to apply these changes.`);
+      fixHints.push(`Run "${formatCliCommand("tessa doctor --fix")}" to apply these changes.`);
     }
   }
 
@@ -242,7 +266,7 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
     if (shouldRepair) {
       cfg = autoEnable.config;
     } else {
-      fixHints.push(`Run "${formatCliCommand("openclaw doctor --fix")}" to apply these changes.`);
+      fixHints.push(`Run "${formatCliCommand("tessa doctor --fix")}" to apply these changes.`);
     }
   }
 
@@ -256,7 +280,7 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
       note(lines, "Doctor changes");
     } else {
       note(lines, "Unknown config keys");
-      fixHints.push('Run "openclaw doctor --fix" to remove these keys.');
+      fixHints.push('Run "tessa doctor --fix" to remove these keys.');
     }
   }
 

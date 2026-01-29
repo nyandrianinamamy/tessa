@@ -1,11 +1,19 @@
 import path from "node:path";
 
-export const DEFAULT_CLI_NAME = "openclaw";
+export const DEFAULT_CLI_NAME = "tessa";
+export const LEGACY_CLI_NAME_1 = "moltbot";
+export const LEGACY_CLI_NAME_2 = "clawdbot";
 
-const KNOWN_CLI_NAMES = new Set([DEFAULT_CLI_NAME]);
-const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(openclaw)\b/;
+const KNOWN_CLI_NAMES = new Set([DEFAULT_CLI_NAME, LEGACY_CLI_NAME_1, LEGACY_CLI_NAME_2]);
+const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(tessa|moltbot|clawdbot)\b/;
 
-export function resolveCliName(argv: string[] = process.argv): string {
+export function resolveCliName(
+  argv: string[] = process.argv,
+  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
+): string {
+  const override =
+    env.TESSA_CLI_NAME?.trim() || env.MOLTBOT_CLI_NAME?.trim() || env.CLAWDBOT_CLI_NAME?.trim();
+  if (override) return override;
   const argv1 = argv[1];
   if (!argv1) return DEFAULT_CLI_NAME;
   const base = path.basename(argv1).trim();

@@ -440,6 +440,114 @@ export async function autoMigrateLegacyStateDir(params: {
   return { migrated: changes.length > 0, skipped: false, changes, warnings };
 }
 
+let autoMigrateMoltbotStateDirChecked = false;
+
+/**
+ * Auto-migrate ~/.moltbot to ~/.tessa if conditions are met.
+ * Similar to autoMigrateLegacyStateDir but for the moltbot→tessa transition.
+ */
+export async function autoMigrateMoltbotToTessaStateDir(params: {
+  env?: NodeJS.ProcessEnv;
+  homedir?: () => string;
+  log?: MigrationLogger;
+}): Promise<StateDirMigrationResult> {
+  if (autoMigrateMoltbotStateDirChecked) {
+    return { migrated: false, skipped: true, changes: [], warnings: [] };
+  }
+  autoMigrateMoltbotStateDirChecked = true;
+
+  const env = params.env ?? process.env;
+  // Skip if user has explicit state dir override
+  if (
+    env.TESSA_STATE_DIR?.trim() ||
+    env.MOLTBOT_STATE_DIR?.trim() ||
+    env.CLAWDBOT_STATE_DIR?.trim()
+  ) {
+    return { migrated: false, skipped: true, changes: [], warnings: [] };
+  }
+
+  const homedir = params.homedir ?? os.homedir;
+  const moltbotDir = path.join(homedir(), ".moltbot");
+  const tessaDir = path.join(homedir(), ".tessa");
+  const warnings: string[] = [];
+  const changes: string[] = [];
+
+  let moltbotStat: fs.Stats | null = null;
+  try {
+    moltbotStat = fs.lstatSync(moltbotDir);
+  } catch {
+    moltbotStat = null;
+  }
+  if (!moltbotStat) {
+    return { migrated: false, skipped: false, changes, warnings };
+  }
+  if (!moltbotStat.isDirectory() && !moltbotStat.isSymbolicLink()) {
+    warnings.push(`Moltbot state path is not a directory: ${moltbotDir}`);
+    return { migrated: false, skipped: false, changes, warnings };
+  }
+
+  if (moltbotStat.isSymbolicLink()) {
+    const moltbotTarget = resolveSymlinkTarget(moltbotDir);
+    if (moltbotTarget && path.resolve(moltbotTarget) === path.resolve(tessaDir)) {
+      // Already migrated and symlinked
+      return { migrated: false, skipped: false, changes, warnings };
+    }
+    warnings.push(
+      `Moltbot state dir is a symlink (${moltbotDir} → ${moltbotTarget ?? "unknown"}); skipping auto-migration.`,
+    );
+    return { migrated: false, skipped: false, changes, warnings };
+  }
+
+  if (isDirPath(tessaDir)) {
+    warnings.push(
+      `State dir migration skipped: target already exists (${tessaDir}). Remove or merge manually.`,
+    );
+    return { migrated: false, skipped: false, changes, warnings };
+  }
+
+  // Perform migration: rename .moltbot to .tessa
+  try {
+    fs.renameSync(moltbotDir, tessaDir);
+  } catch (err) {
+    warnings.push(`Failed to move moltbot state dir (${moltbotDir} → ${tessaDir}): ${String(err)}`);
+    return { migrated: false, skipped: false, changes, warnings };
+  }
+
+  // Create symlink .moltbot → .tessa for backward compatibility
+  try {
+    fs.symlinkSync(tessaDir, moltbotDir, "dir");
+    changes.push(formatStateDirMigration(moltbotDir, tessaDir));
+  } catch (err) {
+    try {
+      if (process.platform === "win32") {
+        fs.symlinkSync(tessaDir, moltbotDir, "junction");
+        changes.push(formatStateDirMigration(moltbotDir, tessaDir));
+      } else {
+        throw err;
+      }
+    } catch (fallbackErr) {
+      try {
+        // Rollback: move .tessa back to .moltbot
+        fs.renameSync(tessaDir, moltbotDir);
+        warnings.push(
+          `State dir migration rolled back (failed to link legacy path): ${String(fallbackErr)}`,
+        );
+        return { migrated: false, skipped: false, changes: [], warnings };
+      } catch (rollbackErr) {
+        warnings.push(
+          `State dir moved but failed to link legacy path (${moltbotDir} → ${tessaDir}): ${String(fallbackErr)}`,
+        );
+        warnings.push(
+          `Rollback failed; set TESSA_STATE_DIR=${tessaDir} to avoid split state: ${String(rollbackErr)}`,
+        );
+        changes.push(`State dir: ${moltbotDir} → ${tessaDir}`);
+      }
+    }
+  }
+
+  return { migrated: changes.length > 0, skipped: false, changes, warnings };
+}
+
 export async function detectLegacyStateMigrations(params: {
   cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
