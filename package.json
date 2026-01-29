@@ -105,16 +105,26 @@
     "tessa:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
     "moltbot:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
     "ios:gen": "cd apps/ios && xcodegen generate",
+<<<<<<< HEAD
     "ios:open": "cd apps/ios && xcodegen generate && open OpenClaw.xcodeproj",
     "ios:build": "bash -lc 'cd apps/ios && xcodegen generate && xcodebuild -project OpenClaw.xcodeproj -scheme OpenClaw -destination \"${IOS_DEST:-platform=iOS Simulator,name=iPhone 17}\" -configuration Debug build'",
     "ios:run": "bash -lc 'cd apps/ios && xcodegen generate && xcodebuild -project OpenClaw.xcodeproj -scheme OpenClaw -destination \"${IOS_DEST:-platform=iOS Simulator,name=iPhone 17}\" -configuration Debug build && xcrun simctl boot \"${IOS_SIM:-iPhone 17}\" || true && xcrun simctl launch booted ai.openclaw.ios'",
+=======
+    "ios:open": "cd apps/ios && xcodegen generate && open Tessa.xcodeproj",
+    "ios:build": "bash -lc 'cd apps/ios && xcodegen generate && xcodebuild -project Tessa.xcodeproj -scheme Tessa -destination \"${IOS_DEST:-platform=iOS Simulator,name=iPhone 17}\" -configuration Debug build'",
+    "ios:run": "bash -lc 'cd apps/ios && xcodegen generate && xcodebuild -project Tessa.xcodeproj -scheme Tessa -destination \"${IOS_DEST:-platform=iOS Simulator,name=iPhone 17}\" -configuration Debug build && xcrun simctl boot \"${IOS_SIM:-iPhone 17}\" || true && xcrun simctl launch booted bot.molt.ios'",
+>>>>>>> 03fda574e (chore: forgotten renaming to tessa)
     "android:assemble": "cd apps/android && ./gradlew :app:assembleDebug",
     "android:install": "cd apps/android && ./gradlew :app:installDebug",
     "android:run": "cd apps/android && ./gradlew :app:installDebug && adb shell am start -n ai.openclaw.android/.MainActivity",
     "android:test": "cd apps/android && ./gradlew :app:testDebugUnitTest",
     "mac:restart": "bash scripts/restart-mac.sh",
     "mac:package": "bash scripts/package-mac-app.sh",
+<<<<<<< HEAD
     "mac:open": "open dist/OpenClaw.app",
+=======
+    "mac:open": "open dist/Tessa.app",
+>>>>>>> 03fda574e (chore: forgotten renaming to tessa)
     "lint": "oxlint --type-aware src test",
     "lint:swift": "swiftlint lint --config .swiftlint.yml && (cd apps/ios && swiftlint lint --config .swiftlint.yml)",
     "lint:all": "pnpm lint && pnpm lint:swift",
@@ -285,7 +295,11 @@
       "apps/macos/.build/**",
       "**/vendor/**",
       "apps/macos/.build/**",
+<<<<<<< HEAD
       "dist/OpenClaw.app/**"
+=======
+      "dist/Tessa.app/**"
+>>>>>>> 03fda574e (chore: forgotten renaming to tessa)
     ]
   }
 }
