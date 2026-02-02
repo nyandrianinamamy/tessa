@@ -112,6 +112,8 @@ describe("state + config path candidates", () => {
       else process.env.HOMEDRIVE = previousHomeDrive;
       if (previousHomePath === undefined) delete process.env.HOMEPATH;
       else process.env.HOMEPATH = previousHomePath;
+      if (previousMoltbotConfig === undefined) delete process.env.MOLTBOT_CONFIG_PATH;
+      else process.env.MOLTBOT_CONFIG_PATH = previousMoltbotConfig;
       if (previousClawdbotConfig === undefined) delete process.env.CLAWDBOT_CONFIG_PATH;
       else process.env.CLAWDBOT_CONFIG_PATH = previousClawdbotConfig;
       if (previousMoltbotState === undefined) delete process.env.MOLTBOT_STATE_DIR;

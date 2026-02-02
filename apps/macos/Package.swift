@@ -1,19 +1,18 @@
 // swift-tools-version: 6.2
-// Package manifest for the Moltbot macOS companion (menu bar app + IPC library).
+// Package manifest for the Tessa macOS companion (menu bar app + IPC library).
 
 import PackageDescription
 
 let package = Package(
-    name: "Moltbot",
+    name: "OpenClaw",
     platforms: [
         .macOS(.v15),
     ],
     products: [
-        .library(name: "MoltbotIPC", targets: ["MoltbotIPC"]),
-        .library(name: "MoltbotDiscovery", targets: ["MoltbotDiscovery"]),
-        .executable(name: "Tessa", targets: ["Moltbot"]),
-        .executable(name: "tessa-mac", targets: ["MoltbotMacCLI"]),
-        .executable(name: "moltbot-mac", targets: ["MoltbotMacCLI"]), // Legacy alias
+        .library(name: "OpenClawIPC", targets: ["OpenClawIPC"]),
+        .library(name: "OpenClawDiscovery", targets: ["OpenClawDiscovery"]),
+        .executable(name: "Tessa", targets: ["OpenClaw"]),
+        .executable(name: "tessa-mac", targets: ["OpenClawMacCLI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/orchetect/MenuBarExtraAccess", exact: "1.2.2"),
@@ -21,33 +20,33 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.8.0"),
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.1"),
         .package(url: "https://github.com/steipete/Peekaboo.git", branch: "main"),
-        .package(path: "../shared/MoltbotKit"),
+        .package(path: "../shared/OpenClawKit"),
         .package(path: "../../Swabble"),
     ],
     targets: [
         .target(
-            name: "MoltbotIPC",
+            name: "OpenClawIPC",
             dependencies: [],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]),
         .target(
-            name: "MoltbotDiscovery",
+            name: "OpenClawDiscovery",
             dependencies: [
-                .product(name: "MoltbotKit", package: "MoltbotKit"),
+                .product(name: "OpenClawKit", package: "OpenClawKit"),
             ],
-            path: "Sources/MoltbotDiscovery",
+            path: "Sources/OpenClawDiscovery",
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]),
         .executableTarget(
-            name: "Moltbot",
+            name: "OpenClaw",
             dependencies: [
-                "MoltbotIPC",
-                "MoltbotDiscovery",
-                .product(name: "MoltbotKit", package: "MoltbotKit"),
-                .product(name: "MoltbotChatUI", package: "MoltbotKit"),
-                .product(name: "MoltbotProtocol", package: "MoltbotKit"),
+                "OpenClawIPC",
+                "OpenClawDiscovery",
+                .product(name: "OpenClawKit", package: "OpenClawKit"),
+                .product(name: "OpenClawChatUI", package: "OpenClawKit"),
+                .product(name: "OpenClawProtocol", package: "OpenClawKit"),
                 .product(name: "SwabbleKit", package: "swabble"),
                 .product(name: "MenuBarExtraAccess", package: "MenuBarExtraAccess"),
                 .product(name: "Subprocess", package: "swift-subprocess"),
@@ -61,34 +60,32 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources/Tessa.icns"),
-                .copy("Resources/Moltbot.icns"), // Keep for backward compatibility
                 .copy("Resources/DeviceModels"),
             ],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]),
         .executableTarget(
-            name: "MoltbotMacCLI",
+            name: "OpenClawMacCLI",
             dependencies: [
-                "MoltbotDiscovery",
-                .product(name: "MoltbotKit", package: "MoltbotKit"),
-                .product(name: "MoltbotProtocol", package: "MoltbotKit"),
+                "OpenClawDiscovery",
+                .product(name: "OpenClawKit", package: "OpenClawKit"),
+                .product(name: "OpenClawProtocol", package: "OpenClawKit"),
             ],
-            path: "Sources/MoltbotMacCLI",
+            path: "Sources/OpenClawMacCLI",
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]),
         .testTarget(
-            name: "MoltbotIPCTests",
+            name: "OpenClawIPCTests",
             dependencies: [
-                "MoltbotIPC",
-                "Moltbot",
-                "MoltbotDiscovery",
-                .product(name: "MoltbotProtocol", package: "MoltbotKit"),
+                "OpenClawIPC",
+                "OpenClaw",
+                "OpenClawDiscovery",
+                .product(name: "OpenClawProtocol", package: "OpenClawKit"),
                 .product(name: "SwabbleKit", package: "swabble"),
             ],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
-                .enableExperimentalFeature("SwiftTesting"),
             ]),
     ])

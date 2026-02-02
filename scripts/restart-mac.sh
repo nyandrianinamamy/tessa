@@ -20,7 +20,7 @@ NO_SIGN=0
 SIGN=0
 AUTO_DETECT_SIGNING=1
 GATEWAY_WAIT_SECONDS="${CLAWDBOT_GATEWAY_WAIT_SECONDS:-0}"
-LAUNCHAGENT_DISABLE_MARKER="${HOME}/.clawdbot/disable-launchagent"
+LAUNCHAGENT_DISABLE_MARKER="${HOME}/.tessa/disable-launchagent"
 ATTACH_ONLY=1
 
 log()  { printf '%s\n' "$*"; }
@@ -97,8 +97,8 @@ for arg in "$@"; do
       log "  CLAWDBOT_GATEWAY_WAIT_SECONDS=0  Wait time before gateway port check (unsigned only)"
       log ""
       log "Unsigned recovery:"
-      log "  node moltbot.mjs daemon install --force --runtime node"
-      log "  node moltbot.mjs daemon restart"
+      log "  node tessa.mjs daemon install --force --runtime node"
+      log "  node tessa.mjs daemon restart"
       log ""
       log "Reset unsigned overrides:"
       log "  rm ~/.clawdbot/disable-launchagent"
@@ -178,7 +178,7 @@ fi
 if [ "$NO_SIGN" -eq 1 ]; then
   export ALLOW_ADHOC_SIGNING=1
   export SIGN_IDENTITY="-"
-  mkdir -p "${HOME}/.clawdbot"
+  mkdir -p "${HOME}/.tessa"
   run_step "disable launchagent writes" /usr/bin/touch "${LAUNCHAGENT_DISABLE_MARKER}"
 elif [ "$SIGN" -eq 1 ]; then
   if ! check_signing_keys; then
@@ -233,8 +233,8 @@ fi
 # When unsigned, ensure the gateway LaunchAgent targets the repo CLI (before the app launches).
 # This reduces noisy "could not connect" errors during app startup.
 if [ "$NO_SIGN" -eq 1 ] && [ "$ATTACH_ONLY" -ne 1 ]; then
-  run_step "install gateway launch agent (unsigned)" bash -lc "cd '${ROOT_DIR}' && node moltbot.mjs daemon install --force --runtime node"
-  run_step "restart gateway daemon (unsigned)" bash -lc "cd '${ROOT_DIR}' && node moltbot.mjs daemon restart"
+  run_step "install gateway launch agent (unsigned)" bash -lc "cd '${ROOT_DIR}' && node tessa.mjs daemon install --force --runtime node"
+  run_step "restart gateway daemon (unsigned)" bash -lc "cd '${ROOT_DIR}' && node tessa.mjs daemon restart"
   if [[ "${GATEWAY_WAIT_SECONDS}" -gt 0 ]]; then
     run_step "wait for gateway (unsigned)" sleep "${GATEWAY_WAIT_SECONDS}"
   fi
@@ -243,7 +243,7 @@ if [ "$NO_SIGN" -eq 1 ] && [ "$ATTACH_ONLY" -ne 1 ]; then
       const fs = require("node:fs");
       const path = require("node:path");
       try {
-        const raw = fs.readFileSync(path.join(process.env.HOME, ".clawdbot", "moltbot.json"), "utf8");
+        const raw = fs.readFileSync(path.join(process.env.HOME, ".tessa", "tessa.json"), "utf8");
         const cfg = JSON.parse(raw);
         const port = cfg && cfg.gateway && typeof cfg.gateway.port === "number" ? cfg.gateway.port : 18789;
         process.stdout.write(String(port));

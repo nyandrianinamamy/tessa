@@ -135,7 +135,7 @@ export type PluginPackageInstall = {
   defaultChoice?: "npm" | "local";
 };
 
-export type MoltbotPackageManifest = {
+export type OpenClawPackageManifest = {
   extensions?: string[];
   channel?: PluginPackageChannel;
   install?: PluginPackageInstall;
@@ -145,13 +145,13 @@ export type PackageManifest = {
   name?: string;
   version?: string;
   description?: string;
-  moltbot?: MoltbotPackageManifest;
-  [LEGACY_MANIFEST_KEY]?: MoltbotPackageManifest;
+  moltbot?: OpenClawPackageManifest;
+  [LEGACY_MANIFEST_KEY]?: OpenClawPackageManifest;
 };
 
 export function getPackageManifestMetadata(
   manifest: PackageManifest | undefined,
-): MoltbotPackageManifest | undefined {
+): OpenClawPackageManifest | undefined {
   if (!manifest) return undefined;
   return manifest.moltbot ?? manifest[LEGACY_MANIFEST_KEY];
 }
