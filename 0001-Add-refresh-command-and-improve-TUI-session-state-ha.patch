@@ -1,0 +1,201 @@
+From 834a028463d9061d015862417228677ef56ecce5 Mon Sep 17 00:00:00 2001
+From: Mamy Razafintsialonina <nyandrianinamamy@gmail.com>
+Date: Thu, 29 Jan 2026 12:44:04 +0100
+Subject: [PATCH] Add /refresh command and improve TUI session state handling
+
+---
+ src/tui/commands.ts             |  2 ++
+ src/tui/tui-command-handlers.ts | 18 ++++++++++++++---
+ src/tui/tui-event-handlers.ts   |  2 +-
+ src/tui/tui-formatters.ts       | 10 ++++++++--
+ src/tui/tui-session-actions.ts  | 35 ++++++++++++++++++++++++---------
+ 5 files changed, 52 insertions(+), 15 deletions(-)
+
+diff --git a/src/tui/commands.ts b/src/tui/commands.ts
+index f119a93ae..9044e142b 100644
+--- a/src/tui/commands.ts
++++ b/src/tui/commands.ts
+@@ -40,6 +40,7 @@ export function getSlashCommands(options: SlashCommandOptions = {}): SlashComman
+   const commands: SlashCommand[] = [
+     { name: "help", description: "Show slash command help" },
+     { name: "status", description: "Show gateway status summary" },
++    { name: "refresh", description: "Refresh chat + status bar" },
+     { name: "agent", description: "Switch agent (or open picker)" },
+     { name: "agents", description: "Open agent picker" },
+     { name: "session", description: "Switch session (or open picker)" },
+@@ -141,6 +142,7 @@ export function helpText(options: SlashCommandOptions = {}): string {
+     "/help",
+     "/commands",
+     "/status",
++    "/refresh",
+     "/agent <id> (or /agents)",
+     "/session <key> (or /sessions)",
+     "/model <provider/model> (or /models)",
+diff --git a/src/tui/tui-command-handlers.ts b/src/tui/tui-command-handlers.ts
+index a14172809..06a35a248 100644
+--- a/src/tui/tui-command-handlers.ts
++++ b/src/tui/tui-command-handlers.ts
+@@ -31,7 +31,7 @@ type CommandHandlerContext = {
+   deliverDefault: boolean;
+   openOverlay: (component: Component) => void;
+   closeOverlay: () => void;
+-  refreshSessionInfo: () => Promise<void>;
++  refreshSessionInfo: (opts?: { force?: boolean }) => Promise<void>;
+   loadHistory: () => Promise<void>;
+   setSession: (key: string) => Promise<void>;
+   refreshAgents: () => Promise<void>;
+@@ -86,7 +86,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
+               model: item.value,
+             });
+             chatLog.addSystem(`model set to ${item.value}`);
+-            await refreshSessionInfo();
++            await refreshSessionInfo({ force: true });
+           } catch (err) {
+             chatLog.addSystem(`model set failed: ${String(err)}`);
+           }
+@@ -255,6 +255,18 @@ export function createCommandHandlers(context: CommandHandlerContext) {
+           chatLog.addSystem(`status failed: ${String(err)}`);
+         }
+         break;
++      case "refresh":
++        try {
++          setActivityStatus("refreshing");
++          await loadHistory();
++          await refreshSessionInfo({ force: true });
++          chatLog.addSystem("refreshed");
++          setActivityStatus("idle");
++        } catch (err) {
++          chatLog.addSystem(`refresh failed: ${String(err)}`);
++          setActivityStatus("refresh failed");
++        }
++        break;
+       case "agent":
+         if (!args) {
+           await openAgentSelector();
+@@ -285,7 +297,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
+               model: args,
+             });
+             chatLog.addSystem(`model set to ${args}`);
+-            await refreshSessionInfo();
++            await refreshSessionInfo({ force: true });
+           } catch (err) {
+             chatLog.addSystem(`model set failed: ${String(err)}`);
+           }
+diff --git a/src/tui/tui-event-handlers.ts b/src/tui/tui-event-handlers.ts
+index bc857c704..cfcef9b67 100644
+--- a/src/tui/tui-event-handlers.ts
++++ b/src/tui/tui-event-handlers.ts
+@@ -9,7 +9,7 @@ type EventHandlerContext = {
+   tui: TUI;
+   state: TuiStateAccess;
+   setActivityStatus: (text: string) => void;
+-  refreshSessionInfo?: () => Promise<void>;
++  refreshSessionInfo?: (opts?: { force?: boolean }) => Promise<void>;
+ };
+ 
+ export function createEventHandlers(context: EventHandlerContext) {
+diff --git a/src/tui/tui-formatters.ts b/src/tui/tui-formatters.ts
+index f77eb9ff1..80e30de9f 100644
+--- a/src/tui/tui-formatters.ts
++++ b/src/tui/tui-formatters.ts
+@@ -78,7 +78,10 @@ export function extractContentFromMessage(message: unknown): string {
+   for (const block of content) {
+     if (!block || typeof block !== "object") continue;
+     const rec = block as Record<string, unknown>;
+-    if (rec.type === "text" && typeof rec.text === "string") {
++    if (
++      (rec.type === "text" || rec.type === "output_text" || rec.type === "input_text") &&
++      typeof rec.text === "string"
++    ) {
+       parts.push(rec.text);
+     }
+   }
+@@ -105,7 +108,10 @@ function extractTextBlocks(content: unknown, opts?: { includeThinking?: boolean
+   for (const block of content) {
+     if (!block || typeof block !== "object") continue;
+     const record = block as Record<string, unknown>;
+-    if (record.type === "text" && typeof record.text === "string") {
++    if (
++      (record.type === "text" || record.type === "output_text" || record.type === "input_text") &&
++      typeof record.text === "string"
++    ) {
+       textParts.push(record.text);
+     }
+     if (
+diff --git a/src/tui/tui-session-actions.ts b/src/tui/tui-session-actions.ts
+index 5dc6696ad..37e09dea7 100644
+--- a/src/tui/tui-session-actions.ts
++++ b/src/tui/tui-session-actions.ts
+@@ -42,6 +42,7 @@ export function createSessionActions(context: SessionActionContext) {
+     setActivityStatus,
+   } = context;
+   let refreshSessionInfoPromise: Promise<void> | null = null;
++  let refreshSessionInfoKey: string | null = null;
+ 
+   const applyAgentsResult = (result: GatewayAgentsList) => {
+     state.agentDefaultId = normalizeAgentId(result.defaultId);
+@@ -95,25 +96,37 @@ export function createSessionActions(context: SessionActionContext) {
+     }
+   };
+ 
+-  const refreshSessionInfo = async () => {
+-    if (refreshSessionInfoPromise) return refreshSessionInfoPromise;
+-    refreshSessionInfoPromise = (async () => {
++  const refreshSessionInfo = async (opts?: { force?: boolean }) => {
++    const requestSessionKey = state.currentSessionKey;
++    const requestAgentId = state.currentAgentId;
++    const requestKey = `${requestAgentId}:${requestSessionKey}`;
++    if (!opts?.force && refreshSessionInfoPromise && refreshSessionInfoKey === requestKey) {
++      return refreshSessionInfoPromise;
++    }
++    refreshSessionInfoKey = requestKey;
++    const promise = (async () => {
+       try {
+         const listAgentId =
+-          state.currentSessionKey === "global" || state.currentSessionKey === "unknown"
++          requestSessionKey === "global" || requestSessionKey === "unknown"
+             ? undefined
+-            : state.currentAgentId;
++            : requestAgentId;
+         const result = await client.listSessions({
+           includeGlobal: false,
+           includeUnknown: false,
+           agentId: listAgentId,
+         });
++        if (
++          state.currentSessionKey !== requestSessionKey ||
++          state.currentAgentId !== requestAgentId
++        ) {
++          return;
++        }
+         const entry = result.sessions.find((row) => {
+           // Exact match
+-          if (row.key === state.currentSessionKey) return true;
++          if (row.key === requestSessionKey) return true;
+           // Also match canonical keys like "agent:default:main" against "main"
+           const parsed = parseAgentSessionKey(row.key);
+-          return parsed?.rest === state.currentSessionKey;
++          return parsed?.rest === requestSessionKey;
+         });
+         state.sessionInfo = {
+           thinkingLevel: entry?.thinkingLevel,
+@@ -136,10 +149,14 @@ export function createSessionActions(context: SessionActionContext) {
+       updateFooter();
+       tui.requestRender();
+     })();
++    refreshSessionInfoPromise = promise;
+     try {
+-      await refreshSessionInfoPromise;
++      await promise;
+     } finally {
+-      refreshSessionInfoPromise = null;
++      if (refreshSessionInfoPromise === promise) {
++        refreshSessionInfoPromise = null;
++        if (refreshSessionInfoKey === requestKey) refreshSessionInfoKey = null;
++      }
+     }
+   };
+ 
+-- 
+2.52.0
+
