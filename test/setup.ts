@@ -13,11 +13,17 @@ import type { OutboundSendDeps } from "../src/infra/outbound/deliver.js";
 import { installProcessWarningFilter } from "../src/infra/warnings.js";
 import { setActivePluginRegistry } from "../src/plugins/runtime.js";
 import { createTestRegistry } from "../src/test-utils/channel-plugins.js";
+import { getDeterministicFreePortBlock } from "../src/test-utils/ports.js";
 import { withIsolatedTestHome } from "./test-env";
 
 installProcessWarningFilter();
 
 const testEnv = withIsolatedTestHome();
+
+if (!process.env.OPENCLAW_GATEWAY_PORT) {
+  const portBlock = await getDeterministicFreePortBlock({ offsets: [0, 1, 2, 3, 4, 5] });
+  process.env.OPENCLAW_GATEWAY_PORT = String(portBlock);
+}
 afterAll(() => testEnv.cleanup());
 const pickSendFn = (id: ChannelId, deps?: OutboundSendDeps) => {
   switch (id) {

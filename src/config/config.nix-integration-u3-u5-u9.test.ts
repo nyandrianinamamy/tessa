@@ -209,10 +209,17 @@ describe("Nix integration (U3, U5, U9)", () => {
 
   describe("U6: gateway port resolution", () => {
     it("uses default when env and config are unset", async () => {
-      await withEnvOverride({ TESSA_GATEWAY_PORT: undefined }, async () => {
-        const { DEFAULT_GATEWAY_PORT, resolveGatewayPort } = await import("./config.js");
-        expect(resolveGatewayPort({})).toBe(DEFAULT_GATEWAY_PORT);
-      });
+      await withEnvOverride(
+        {
+          CLAWDBOT_GATEWAY_PORT: undefined,
+          OPENCLAW_GATEWAY_PORT: undefined,
+          TESSA_GATEWAY_PORT: undefined,
+        },
+        async () => {
+          const { DEFAULT_GATEWAY_PORT, resolveGatewayPort } = await import("./config.js");
+          expect(resolveGatewayPort({})).toBe(DEFAULT_GATEWAY_PORT);
+        },
+      );
     });
 
     it("prefers TESSA_GATEWAY_PORT over config", async () => {

@@ -52,9 +52,11 @@ describe("state + config path candidates", () => {
     expect(candidates[0]).toBe(path.join(home, ".tessa", "tessa.json"));
     expect(candidates[1]).toBe(path.join(home, ".tessa", "moltbot.json"));
     expect(candidates[2]).toBe(path.join(home, ".tessa", "clawdbot.json"));
-    expect(candidates[3]).toBe(path.join(home, ".moltbot", "tessa.json"));
-    expect(candidates[4]).toBe(path.join(home, ".moltbot", "moltbot.json"));
-    expect(candidates[5]).toBe(path.join(home, ".moltbot", "clawdbot.json"));
+    expect(candidates[3]).toBe(path.join(home, ".tessa", "moldbot.json"));
+    expect(candidates[4]).toBe(path.join(home, ".moltbot", "tessa.json"));
+    expect(candidates[5]).toBe(path.join(home, ".moltbot", "moltbot.json"));
+    expect(candidates[6]).toBe(path.join(home, ".moltbot", "clawdbot.json"));
+    expect(candidates[7]).toBe(path.join(home, ".moltbot", "moldbot.json"));
   });
 
   it("prefers ~/.moltbot when it exists and legacy dir is missing", async () => {

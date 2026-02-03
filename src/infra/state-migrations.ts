@@ -316,7 +316,12 @@ export async function autoMigrateLegacyStateDir(params: {
   autoMigrateStateDirChecked = true;
 
   const env = params.env ?? process.env;
-  if (env.OPENCLAW_STATE_DIR?.trim()) {
+  if (
+    env.OPENCLAW_STATE_DIR?.trim() ||
+    env.TESSA_STATE_DIR?.trim() ||
+    env.MOLTBOT_STATE_DIR?.trim() ||
+    env.CLAWDBOT_STATE_DIR?.trim()
+  ) {
     return { migrated: false, skipped: true, changes: [], warnings: [] };
   }
 

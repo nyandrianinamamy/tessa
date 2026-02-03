@@ -44,8 +44,8 @@ function legacyStateDir2(homedir: () => string = os.homedir): string {
 
 function legacyStateDirs(homedir: () => string = os.homedir): string[] {
   return [
-    path.join(homedir(), LEGACY_STATE_DIRNAME_2),
     path.join(homedir(), LEGACY_STATE_DIRNAME_1),
+    path.join(homedir(), LEGACY_STATE_DIRNAME_2),
     path.join(homedir(), LEGACY_STATE_DIRNAME_3),
   ];
 }
@@ -264,7 +264,10 @@ export function resolveGatewayPort(
   cfg?: OpenClawConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): number {
-  const envRaw = env.TESSA_GATEWAY_PORT?.trim() || env.CLAWDBOT_GATEWAY_PORT?.trim();
+  const envRaw =
+    env.TESSA_GATEWAY_PORT?.trim() ||
+    env.OPENCLAW_GATEWAY_PORT?.trim() ||
+    env.CLAWDBOT_GATEWAY_PORT?.trim();
   if (envRaw) {
     const parsed = Number.parseInt(envRaw, 10);
     if (Number.isFinite(parsed) && parsed > 0) return parsed;
