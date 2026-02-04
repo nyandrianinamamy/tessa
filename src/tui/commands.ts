@@ -118,6 +118,7 @@ export function getSlashCommands(options: SlashCommandOptions = {}): SlashComman
     { name: "new", description: "Reset the session" },
     { name: "reset", description: "Reset the session" },
     { name: "settings", description: "Open settings" },
+    { name: "prepare-my-day", description: "Send /prepare-my-day message" },
     { name: "exit", description: "Exit the TUI" },
     { name: "quit", description: "Exit the TUI" },
   ];
@@ -159,6 +160,7 @@ export function helpText(options: SlashCommandOptions = {}): string {
     "/activation <mention|always>",
     "/new or /reset",
     "/abort",
+    "/prepare-my-day",
     "/settings",
     "/exit",
   ].join("\n");

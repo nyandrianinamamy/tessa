@@ -443,6 +443,9 @@ export function createCommandHandlers(context: CommandHandlerContext) {
       case "settings":
         openSettings();
         break;
+      case "prepare-my-day":
+        await sendMessage("/prepare-my-day");
+        break;
       case "exit":
       case "quit":
         client.stop();
