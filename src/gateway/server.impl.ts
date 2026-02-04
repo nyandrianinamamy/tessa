@@ -292,7 +292,11 @@ export async function startGatewayServer(
       cwd: initialCwd,
     });
     if (!resolvedRoot) {
-      const ensureResult = await ensureControlUiAssetsBuilt(gatewayRuntime);
+      const ensureResult = await ensureControlUiAssetsBuilt(gatewayRuntime, {
+        argv1: process.argv[1],
+        moduleUrl: import.meta.url,
+        cwd: initialCwd,
+      });
       if (!ensureResult.ok && ensureResult.message) {
         log.warn(`gateway: ${ensureResult.message}`);
       }

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   resolveControlUiDistIndexPath,
@@ -35,6 +36,24 @@ describe("control UI assets helpers", () => {
       await fs.writeFile(path.join(tmp, "dist", "index.js"), "export {};\n");
 
       expect(resolveControlUiRepoRoot(path.join(tmp, "dist", "index.js"))).toBe(tmp);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves repo root from moduleUrl when argv1 is unrelated", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
+    try {
+      await fs.mkdir(path.join(tmp, "ui"), { recursive: true });
+      await fs.writeFile(path.join(tmp, "ui", "vite.config.ts"), "export {};\n");
+      await fs.writeFile(path.join(tmp, "package.json"), "{}\n");
+      await fs.mkdir(path.join(tmp, "dist", "gateway"), { recursive: true });
+      await fs.writeFile(path.join(tmp, "dist", "gateway", "control-ui.js"), "export {};\n");
+
+      const moduleUrl = pathToFileURL(
+        path.join(tmp, "dist", "gateway", "control-ui.js"),
+      ).toString();
+      expect(resolveControlUiRepoRoot({ moduleUrl })).toBe(tmp);
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
@@ -140,6 +159,23 @@ describe("control UI assets helpers", () => {
 
       expect(await resolveControlUiDistIndexPath(path.join(binDir, "openclaw"))).toBe(
         path.join(pkgRoot, "dist", "control-ui", "index.html"),
+      );
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves dist control-ui index path from moduleUrl", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
+    try {
+      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "openclaw" }));
+      await fs.mkdir(path.join(tmp, "dist", "gateway"), { recursive: true });
+      await fs.mkdir(path.join(tmp, "dist", "control-ui"), { recursive: true });
+      await fs.writeFile(path.join(tmp, "dist", "gateway", "server.js"), "export {};\n");
+
+      const moduleUrl = pathToFileURL(path.join(tmp, "dist", "gateway", "server.js")).toString();
+      expect(await resolveControlUiDistIndexPath({ moduleUrl })).toBe(
+        path.join(tmp, "dist", "control-ui", "index.html"),
       );
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });

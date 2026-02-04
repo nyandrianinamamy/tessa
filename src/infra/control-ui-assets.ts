@@ -5,24 +5,15 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
 import { resolveOpenClawPackageRoot, resolveOpenClawPackageRootSync } from "./openclaw-root.js";
 
-export function resolveControlUiRepoRoot(
-  argv1: string | undefined = process.argv[1],
-): string | null {
-  if (!argv1) {
-    return null;
-  }
-  const normalized = path.resolve(argv1);
-  const parts = normalized.split(path.sep);
-  const srcIndex = parts.lastIndexOf("src");
-  if (srcIndex !== -1) {
-    const root = parts.slice(0, srcIndex).join(path.sep);
-    if (fs.existsSync(path.join(root, "ui", "vite.config.ts"))) {
-      return root;
-    }
-  }
+export type ControlUiRepoRootResolveOptions = {
+  argv1?: string;
+  moduleUrl?: string;
+  cwd?: string;
+};
 
-  let dir = path.dirname(normalized);
-  for (let i = 0; i < 8; i++) {
+function findControlUiRepoRoot(startDir: string, maxDepth = 8): string | null {
+  let dir = path.resolve(startDir);
+  for (let i = 0; i < maxDepth; i += 1) {
     if (
       fs.existsSync(path.join(dir, "package.json")) &&
       fs.existsSync(path.join(dir, "ui", "vite.config.ts"))
@@ -35,25 +26,77 @@ export function resolveControlUiRepoRoot(
     }
     dir = parent;
   }
+  return null;
+}
+
+export function resolveControlUiRepoRoot(
+  opts: string | ControlUiRepoRootResolveOptions = { argv1: process.argv[1] },
+): string | null {
+  const argv1 = typeof opts === "string" ? opts : opts.argv1;
+  const moduleUrl = typeof opts === "string" ? undefined : opts.moduleUrl;
+  const cwd = typeof opts === "string" ? undefined : opts.cwd;
+  const candidates: string[] = [];
+
+  if (argv1) {
+    const normalized = path.resolve(argv1);
+    const parts = normalized.split(path.sep);
+    const srcIndex = parts.lastIndexOf("src");
+    if (srcIndex !== -1) {
+      const root = parts.slice(0, srcIndex).join(path.sep);
+      if (fs.existsSync(path.join(root, "ui", "vite.config.ts"))) {
+        return root;
+      }
+    }
+    candidates.push(path.dirname(normalized));
+  }
+
+  if (moduleUrl) {
+    candidates.push(path.dirname(fileURLToPath(moduleUrl)));
+  }
+  if (cwd) {
+    candidates.push(cwd);
+  }
+
+  for (const candidate of candidates) {
+    const found = findControlUiRepoRoot(candidate);
+    if (found) {
+      return found;
+    }
+  }
 
   return null;
 }
 
+export type ControlUiDistIndexResolveOptions = {
+  argv1?: string;
+  moduleUrl?: string;
+  cwd?: string;
+};
+
 export async function resolveControlUiDistIndexPath(
-  argv1: string | undefined = process.argv[1],
+  opts: string | ControlUiDistIndexResolveOptions = { argv1: process.argv[1] },
 ): Promise<string | null> {
-  if (!argv1) {
+  const argv1 = typeof opts === "string" ? opts : opts.argv1;
+  const moduleUrl = typeof opts === "string" ? undefined : opts.moduleUrl;
+  const cwd = typeof opts === "string" ? undefined : opts.cwd;
+  if (!argv1 && !moduleUrl && !cwd) {
     return null;
   }
-  const normalized = path.resolve(argv1);
+  const normalized = argv1 ? path.resolve(argv1) : null;
 
   // Case 1: entrypoint is directly inside dist/ (e.g., dist/entry.js)
-  const distDir = path.dirname(normalized);
-  if (path.basename(distDir) === "dist") {
-    return path.join(distDir, "control-ui", "index.html");
+  if (normalized) {
+    const distDir = path.dirname(normalized);
+    if (path.basename(distDir) === "dist") {
+      return path.join(distDir, "control-ui", "index.html");
+    }
   }
 
-  const packageRoot = await resolveOpenClawPackageRoot({ argv1: normalized });
+  const packageRoot = await resolveOpenClawPackageRoot({
+    argv1: normalized ?? undefined,
+    moduleUrl,
+    cwd,
+  });
   if (!packageRoot) {
     return null;
   }
@@ -163,14 +206,27 @@ function summarizeCommandOutput(text: string): string | undefined {
 
 export async function ensureControlUiAssetsBuilt(
   runtime: RuntimeEnv = defaultRuntime,
-  opts?: { timeoutMs?: number },
+  opts?: {
+    timeoutMs?: number;
+    argv1?: string;
+    moduleUrl?: string;
+    cwd?: string;
+  },
 ): Promise<EnsureControlUiAssetsResult> {
-  const indexFromDist = await resolveControlUiDistIndexPath(process.argv[1]);
+  const indexFromDist = await resolveControlUiDistIndexPath({
+    argv1: opts?.argv1 ?? process.argv[1],
+    moduleUrl: opts?.moduleUrl,
+    cwd: opts?.cwd,
+  });
   if (indexFromDist && fs.existsSync(indexFromDist)) {
     return { ok: true, built: false };
   }
 
-  const repoRoot = resolveControlUiRepoRoot(process.argv[1]);
+  const repoRoot = resolveControlUiRepoRoot({
+    argv1: opts?.argv1 ?? process.argv[1],
+    moduleUrl: opts?.moduleUrl,
+    cwd: opts?.cwd,
+  });
   if (!repoRoot) {
     const hint = indexFromDist
       ? `Missing Control UI assets at ${indexFromDist}`
