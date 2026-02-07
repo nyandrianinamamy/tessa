@@ -27,7 +27,12 @@ export function readSessionMessages(
     try {
       const parsed = JSON.parse(line);
       if (parsed?.message) {
-        messages.push(parsed.message);
+        // Attach transcript entry ID to the message object for deletion support
+        const messageWithId =
+          typeof parsed.id === "string"
+            ? { ...parsed.message, id: parsed.id }
+            : parsed.message;
+        messages.push(messageWithId);
       }
     } catch {
       // ignore bad lines
