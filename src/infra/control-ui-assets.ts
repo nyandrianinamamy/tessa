@@ -5,6 +5,38 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
 import { resolveOpenClawPackageRoot, resolveOpenClawPackageRootSync } from "./openclaw-root.js";
 
+const CONTROL_UI_DIST_PATH_SEGMENTS = ["dist", "control-ui", "index.html"] as const;
+
+export function resolveControlUiDistIndexPathForRoot(root: string): string {
+  return path.join(root, ...CONTROL_UI_DIST_PATH_SEGMENTS);
+}
+
+export type ControlUiDistIndexHealth = {
+  indexPath: string | null;
+  exists: boolean;
+};
+
+export async function resolveControlUiDistIndexHealth(
+  opts: {
+    root?: string;
+    argv1?: string;
+    moduleUrl?: string;
+    cwd?: string;
+  } = {},
+): Promise<ControlUiDistIndexHealth> {
+  const indexPath = opts.root
+    ? resolveControlUiDistIndexPathForRoot(opts.root)
+    : await resolveControlUiDistIndexPath({
+        argv1: opts.argv1 ?? process.argv[1],
+        moduleUrl: opts.moduleUrl,
+        cwd: opts.cwd,
+      });
+  return {
+    indexPath,
+    exists: Boolean(indexPath && fs.existsSync(indexPath)),
+  };
+}
+
 export type ControlUiRepoRootResolveOptions = {
   argv1?: string;
   moduleUrl?: string;
@@ -238,12 +270,13 @@ export async function ensureControlUiAssetsBuilt(
     cwd?: string;
   },
 ): Promise<EnsureControlUiAssetsResult> {
-  const indexFromDist = await resolveControlUiDistIndexPath({
+  const health = await resolveControlUiDistIndexHealth({
     argv1: opts?.argv1 ?? process.argv[1],
     moduleUrl: opts?.moduleUrl,
     cwd: opts?.cwd,
   });
-  if (indexFromDist && fs.existsSync(indexFromDist)) {
+  const indexFromDist = health.indexPath;
+  if (health.exists) {
     return { ok: true, built: false };
   }
 
@@ -263,7 +296,7 @@ export async function ensureControlUiAssetsBuilt(
     };
   }
 
-  const indexPath = path.join(repoRoot, "dist", "control-ui", "index.html");
+  const indexPath = resolveControlUiDistIndexPathForRoot(repoRoot);
   if (fs.existsSync(indexPath)) {
     return { ok: true, built: false };
   }

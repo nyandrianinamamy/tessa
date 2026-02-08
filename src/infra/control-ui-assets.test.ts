@@ -4,7 +4,9 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  resolveControlUiDistIndexHealth,
   resolveControlUiDistIndexPath,
+  resolveControlUiDistIndexPathForRoot,
   resolveControlUiRepoRoot,
   resolveControlUiRootOverrideSync,
   resolveControlUiRootSync,
@@ -248,6 +250,35 @@ describe("control UI assets helpers", () => {
       expect(resolveControlUiRootSync({ cwd: process.cwd() })).toBeNull();
     } finally {
       process.chdir(prevCwd);
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("reports health for existing control-ui assets at a known root", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
+    try {
+      const indexPath = resolveControlUiDistIndexPathForRoot(tmp);
+      await fs.mkdir(path.dirname(indexPath), { recursive: true });
+      await fs.writeFile(indexPath, "<html></html>\n");
+
+      await expect(resolveControlUiDistIndexHealth({ root: tmp })).resolves.toEqual({
+        indexPath,
+        exists: true,
+      });
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("reports health for missing control-ui assets at a known root", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
+    try {
+      const indexPath = resolveControlUiDistIndexPathForRoot(tmp);
+      await expect(resolveControlUiDistIndexHealth({ root: tmp })).resolves.toEqual({
+        indexPath,
+        exists: false,
+      });
+    } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
   });
