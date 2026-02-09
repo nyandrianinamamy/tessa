@@ -2,16 +2,16 @@ import { describe, expect, test } from "vitest";
 import { stripEnvelopeFromMessage } from "./chat-sanitize.js";
 
 describe("stripEnvelopeFromMessage", () => {
-  test("removes message_id hint lines from user messages", () => {
+  test("preserves message_id hint lines in user messages", () => {
     const input = {
       role: "user",
       content: "[WhatsApp 2026-01-24 13:36] yolo\n[message_id: 7b8b]",
     };
     const result = stripEnvelopeFromMessage(input) as { content?: string };
-    expect(result.content).toBe("yolo");
+    expect(result.content).toBe("yolo\n[message_id: 7b8b]");
   });
 
-  test("removes message_id hint lines from text content arrays", () => {
+  test("preserves message_id hint lines in text content arrays", () => {
     const input = {
       role: "user",
       content: [{ type: "text", text: "hi\n[message_id: abc123]" }],
@@ -19,7 +19,7 @@ describe("stripEnvelopeFromMessage", () => {
     const result = stripEnvelopeFromMessage(input) as {
       content?: Array<{ type: string; text?: string }>;
     };
-    expect(result.content?.[0]?.text).toBe("hi");
+    expect(result.content?.[0]?.text).toBe("hi\n[message_id: abc123]");
   });
 
   test("does not strip inline message_id text that is part of a line", () => {
