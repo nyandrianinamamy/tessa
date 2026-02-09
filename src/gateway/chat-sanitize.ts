@@ -15,6 +15,8 @@ const ENVELOPE_CHANNELS = [
   "BlueBubbles",
 ];
 
+const MESSAGE_ID_LINE = /^\s*\[message_id:\s*[^\]]+\]\s*$/i;
+
 function looksLikeEnvelopeHeader(header: string): boolean {
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z\b/.test(header)) {
     return true;
@@ -37,6 +39,15 @@ export function stripEnvelope(text: string): string {
   return text.slice(match[0].length);
 }
 
+function stripMessageIdHints(text: string): string {
+  if (!text.includes("[message_id:")) {
+    return text;
+  }
+  const lines = text.split(/\r?\n/);
+  const filtered = lines.filter((line) => !MESSAGE_ID_LINE.test(line));
+  return filtered.length === lines.length ? text : filtered.join("\n");
+}
+
 function stripEnvelopeFromContent(content: unknown[]): { content: unknown[]; changed: boolean } {
   let changed = false;
   const next = content.map((item) => {
@@ -47,7 +58,7 @@ function stripEnvelopeFromContent(content: unknown[]): { content: unknown[]; cha
     if (entry.type !== "text" || typeof entry.text !== "string") {
       return item;
     }
-    const stripped = stripEnvelope(entry.text);
+    const stripped = stripMessageIdHints(stripEnvelope(entry.text));
     if (stripped === entry.text) {
       return item;
     }
@@ -74,7 +85,7 @@ export function stripEnvelopeFromMessage(message: unknown): unknown {
   const next: Record<string, unknown> = { ...entry };
 
   if (typeof entry.content === "string") {
-    const stripped = stripEnvelope(entry.content);
+    const stripped = stripMessageIdHints(stripEnvelope(entry.content));
     if (stripped !== entry.content) {
       next.content = stripped;
       changed = true;
@@ -86,7 +97,7 @@ export function stripEnvelopeFromMessage(message: unknown): unknown {
       changed = true;
     }
   } else if (typeof entry.text === "string") {
-    const stripped = stripEnvelope(entry.text);
+    const stripped = stripMessageIdHints(stripEnvelope(entry.text));
     if (stripped !== entry.text) {
       next.text = stripped;
       changed = true;
