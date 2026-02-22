@@ -485,6 +485,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
       noteLocalRunId(runId);
       state.activeChatRunId = runId;
       setActivityStatus("sending");
+      tui.requestRender();
       await client.sendChat({
         sessionKey: state.currentSessionKey,
         message: text,
@@ -494,6 +495,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
         runId,
       });
       setActivityStatus("waiting");
+      tui.requestRender();
     } catch (err) {
       if (state.activeChatRunId) {
         forgetLocalRunId?.(state.activeChatRunId);
@@ -501,8 +503,8 @@ export function createCommandHandlers(context: CommandHandlerContext) {
       state.activeChatRunId = null;
       chatLog.addSystem(`send failed: ${String(err)}`);
       setActivityStatus("error");
+      tui.requestRender();
     }
-    tui.requestRender();
   };
 
   return {
